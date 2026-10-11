@@ -1,0 +1,38 @@
+version: 2
+models:
+  - name: stg_invoices
+    columns:
+      - name: invoice_id
+        tests: [not_null, unique]
+      - name: customer_id
+        tests: [not_null]
+      - name: amount_usd
+        tests: [not_null]
+      - name: currency
+        tests: [not_null]
+      - name: fx_rate
+        tests: [not_null]
+  - name: fct_invoices
+    columns:
+      - name: invoice_id
+        tests: [not_null, unique]
+      - name: amount_local
+        tests: [not_null]
+      - name: amount_usd
+        tests: [not_null]
+  - name: mart_ar_aging
+    columns:
+      - name: customer_id
+        tests: [not_null, unique]
+  - name: mart_dso
+    columns:
+      - name: customer_id
+        tests: [not_null, unique]
+  - name: mart_invoice_risk
+    columns:
+      - name: invoice_id
+        tests: [not_null, unique]
+  - name: mart_support_cost
+    columns:
+      - name: customer_id
+        tests: [not_null, unique]
