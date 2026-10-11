@@ -1,0 +1,2 @@
+# Fetch the official matching constraints file before installation:
+# https://raw.githubusercontent.com/apache/airflow/constraints-2.10.5/constraints-3.12.txt
