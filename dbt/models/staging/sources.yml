@@ -1,0 +1,16 @@
+version: 2
+
+sources:
+  - name: raw
+    schema: finpulse_raw
+    tables:
+      - name: invoices
+        loaded_at_field: _ingested_at
+        freshness:
+          warn_after: {count: 24, period: hour}
+          error_after: {count: 48, period: hour}
+      - name: ticket_events
+        loaded_at_field: _ingested_at
+        freshness:
+          warn_after: {count: 2, period: hour}
+          error_after: {count: 6, period: hour}
