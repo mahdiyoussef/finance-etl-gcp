@@ -21,6 +21,24 @@ generator -> landing CSV -> batch loader -> SQLite raw/core -> marts
                                       \-> ticket events -> deduplicated facts
 ```
 
+## Architecture diagrams
+
+### GCP architecture
+
+![FinPulse GCP architecture](./diagrams/gcp-architecture.svg)
+
+The architecture uses Google Cloud service nodes for Cloud Storage, Cloud
+Composer/Airflow, Pub/Sub, Dataflow, BigQuery, dbt, Looker Studio, and the
+cross-cutting Terraform/IAM/Monitoring controls.
+
+### ETL pipeline
+
+![FinPulse ETL pipeline](./diagrams/etl-pipeline.svg)
+
+The ETL diagram separates the idempotent batch path from the event-time
+streaming path and shows where validation, quarantine, dbt transformations,
+and serving occur.
+
 ## Quick start: local MVP
 
 ```bash
@@ -133,7 +151,6 @@ src/finpulse/       application and ingestion package
 dags/               Apache Airflow DAGs / Cloud Composer entrypoints
 scripts/            operational CLIs, including full dataset download
 tests/              unit and integration tests
-docs/               architecture, runbook, ADRs, and cost notes
 terraform/          environment and GCP infrastructure modules
 data/               ignored local data and generated artifacts
 ```
@@ -233,20 +250,10 @@ separate Pub/Sub resources, and a protected GitHub environment. Deployment is
 performed through GitHub OIDC and Workload Identity Federation rather than a
 long-lived JSON key.
 
-See [docs/release-checklist.md](./docs/release-checklist.md) before deploying.
-
-## Backlog status
-
-Implemented: professional structure, complete dataset download, streaming
-bulk loader, Airflow DAG, dbt contracts, Terraform development foundation,
-Beam ticket-event contract, and CI quality gates.
-
-Deployment-ready contracts are implemented. Live GCP execution remains
-environment-specific: it requires a project, billing account, remote state,
-WIF configuration, and approved credentials.
-
-See [docs/interview-guide.md](./docs/interview-guide.md) for the demo script
-and design questions this project prepares you to answer.
+Before deploying, verify the Terraform plan, IAM bindings, budget alerts,
+remote-state bucket, WIF configuration, and production deletion protection.
+The repository's README, Airflow guide, dbt guide, Terraform files, and CI
+workflow contain the operating instructions.
 
 ## Developer commands
 
@@ -259,9 +266,7 @@ make airflow-up
 ```
 
 Use [`.env.example`](./.env.example) for configuration names and
-[docs/release-checklist.md](./docs/release-checklist.md) before applying any
-GCP environment.
+review the Terraform plan before applying any GCP environment.
 
-For BigQuery transformations, follow
-[docs/dbt-runbook.md](./docs/dbt-runbook.md). The Airflow load task must
-complete before `dbt source freshness` or `dbt build` runs.
+For BigQuery transformations, configure `dbt/profiles.yml` and run
+`dbt source freshness` followed by `dbt build` after the Airflow load task.

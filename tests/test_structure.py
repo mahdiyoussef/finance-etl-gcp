@@ -16,5 +16,5 @@ class StructureTest(unittest.TestCase):
 
     def test_professional_directories_exist(self) -> None:
         """Require the documented top-level project directories."""
-        for directory in ("src/finpulse", "dags", "scripts", "tests", "docs", "dbt"):
+        for directory in ("src/finpulse", "dags", "scripts", "tests", "dbt", "diagrams"):
             self.assertTrue((ROOT / directory).is_dir(), directory)

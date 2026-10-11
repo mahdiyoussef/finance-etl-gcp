@@ -50,12 +50,13 @@ class DeploymentArtifactTest(unittest.TestCase):
         self.assertIn("google_project_service", dev)
         self.assertIn("google_project_service", prod)
 
-    def test_developer_commands_and_release_checklist_exist(self) -> None:
-        """Require one-command development workflows and release guidance."""
+    def test_developer_commands_and_release_guidance_exist(self) -> None:
+        """Require one-command development workflows and README release guidance."""
         makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
-        checklist = (ROOT / "docs/release-checklist.md").read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
         self.assertIn("PYTHONPATH=src $(PYTHON) -m unittest", makefile)
-        self.assertIn("Workload Identity Federation", checklist)
+        self.assertIn("Workload Identity Federation", readme)
+        self.assertNotIn("docs/", readme)
 
     def test_dbt_contract_files_exist(self) -> None:
         """Require the complete dbt model and source contract."""
