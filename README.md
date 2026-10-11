@@ -1,0 +1,267 @@
+# FinPulse: Invoice-to-Cash & Support Cost Intelligence
+
+FinPulse is an end-to-end data engineering portfolio project for a fictional
+B2B SaaS company. It unifies invoice, payment, customer, vendor, and support
+event data so finance and support leaders can answer:
+
+1. What is DSO and AR aging by customer, segment, and region?
+2. Which invoices are at risk of becoming late?
+3. Which records are duplicates, malformed, or anomalous?
+4. Which billing tickets correlate with delayed payment?
+5. What is support cost per customer and SLA breach rate?
+6. How much revenue is exposed by open escalations?
+
+The repository contains a fully runnable local implementation and cloud-ready
+contracts for BigQuery, Cloud Storage, Pub/Sub, Dataflow, Cloud Composer,
+Terraform, dbt, BigQuery ML, and Looker Studio. The local path is deliberately
+complete so it can be tested without cloud credentials:
+
+```text
+generator -> landing CSV -> batch loader -> SQLite raw/core -> marts
+                                      \-> ticket events -> deduplicated facts
+```
+
+## Quick start: local MVP
+
+```bash
+PYTHONPATH=src python -m finpulse run --output data/demo --customers 25 --invoices 100
+python -m unittest discover -s tests -v
+```
+
+The run produces:
+
+- `data/demo/landing/invoices_YYYY-MM-DD.csv`
+- `data/demo/landing/ticket_events_YYYY-MM-DD.jsonl`
+- `data/demo/finpulse.db`
+- `data/demo/marts/ar_aging.csv`
+- `data/demo/marts/dso.csv`
+- `data/demo/marts/invoice_risk.csv`
+- `data/demo/marts/support_cost.csv`
+
+The report date is explicit so backfills and tests are reproducible:
+
+```bash
+python -m finpulse run --output data/demo --report-date 2026-01-31
+```
+
+The CLI prints a quality report containing accepted row counts, quarantine
+counts, orphan foreign keys, and invalid amounts.
+
+Ticket events are retained as an append-only fact and materialized into
+`tickets_latest`; the support mart also reports tickets breaching the
+24-hour synthetic SLA.
+
+The generator deliberately emits duplicates, invalid rows, and late ticket
+events. The loader quarantines invalid records and uses business keys to make
+re-runs idempotent.
+
+## Business grain and metrics
+
+| Dataset | Grain | Primary key | Purpose |
+|---|---|---|---|
+| `invoices` | One row per invoice | `invoice_id` | Invoice amount, due date, status |
+| `ticket_events` | One row per status-change event | `event_id` | Immutable support history |
+| `tickets_latest` | One row per ticket's latest state | `ticket_id` | Current support workload |
+| `ar_aging` | One row per segment and region | `segment, region` | Current and overdue receivables |
+| `dso` | One row per segment and region | `segment, region` | Weighted days to pay |
+| `invoice_risk` | One row per invoice | `invoice_id` | Deterministic risk band |
+| `support_cost` | One row per customer | `customer_id` | Ticket volume, SLA, estimated cost |
+
+The local support-cost estimate is `ticket_count * 25`. It is a transparent
+synthetic assumption, not an accounting charge. Replace it with agent labor
+minutes, loaded hourly cost, and vendor charges in a production implementation.
+
+## End-to-end execution
+
+```text
+Kaggle source files
+    -> Airflow download task
+    -> bounded CSV streaming and normalization
+    -> raw/core warehouse tables
+    -> quarantine and quality gate
+    -> dbt source freshness
+    -> dbt incremental facts and marts
+    -> Looker Studio / ML consumers
+```
+
+The source dataset is synthetic and contains two complete files:
+
+```text
+train_invoices.csv
+test_invoices.csv
+```
+
+Both files are required. The loader processes them sequentially and never
+creates a second combined 1.3 GB CSV.
+
+## Data quality and idempotency
+
+The pipeline intentionally handles realistic failure modes:
+
+- Duplicate invoice IDs are ignored on retry.
+- Duplicate ticket event IDs are ignored.
+- Invalid numeric values are quarantined.
+- Missing dates and business keys are quarantined.
+- Orphan foreign keys fail the quality gate.
+- Negative invoice amounts fail the quality gate.
+- A matching dataset manifest skips a redundant 1.3 GB download.
+- The Airflow DAG retries transient failures twice.
+
+The `quarantine` table stores the source name, serialized record, and error
+message. It is an operational investigation surface, not a silent discard.
+
+## GCP mapping
+
+| Local component | GCP implementation |
+|---|---|
+| Landing directory | GCS |
+| SQLite raw/core tables | BigQuery datasets |
+| `BatchLoader` | Composer task / Cloud Run Job |
+| `TicketEventProcessor` | Beam Dataflow pipeline |
+| CSV marts | dbt BigQuery marts |
+
+The local implementation is the executable contract for those later adapters.
+The full external dataset is processed by streaming each source CSV in batches;
+the pipeline never creates a second 1.3 GB combined staging file.
+Source amounts are retained as `amount_local`; `amount_usd` is derived with the
+configured FX snapshot and unsupported currencies are quarantined.
+
+## Repository layout
+
+```text
+src/finpulse/       application and ingestion package
+dags/               Apache Airflow DAGs / Cloud Composer entrypoints
+scripts/            operational CLIs, including full dataset download
+tests/              unit and integration tests
+docs/               architecture, runbook, ADRs, and cost notes
+terraform/          environment and GCP infrastructure modules
+data/               ignored local data and generated artifacts
+```
+
+Additional deployment and analytics contracts are in:
+
+```text
+warehouse/ddl/      BigQuery dataset and table DDL
+ml/                 BigQuery ML model SQL
+dashboards/         Dashboard metric and page contract
+airflow/            Local Airflow instructions and constraints reference
+```
+
+The first infrastructure environment is in
+[`terraform/envs/dev`](./terraform/envs/dev). It provisions labeled GCS,
+BigQuery raw/core datasets, and Pub/Sub event/DLQ topics. It intentionally
+requires an explicit project ID and a pre-created remote-state bucket before
+apply.
+
+The dbt contract is in [`dbt/`](./dbt), and the optional Beam contract is in
+[`streaming.py`](./src/finpulse/streaming.py). These are validated in CI
+without requiring cloud credentials.
+
+## Full B2B dataset download
+
+The selected public source is the Global B2B Invoice & Payments dataset. It
+contains large `train_invoices.csv` and `test_invoices.csv` files. The project
+does not commit this multi-gigabyte data or credentials. To download the
+complete dataset, create a Kaggle API token, place it at
+`~/.kaggle/kaggle.json`, and run:
+
+```bash
+python scripts/download_b2b_dataset.py
+```
+
+The command uses the Kaggle CLI with `--unzip`, verifies both expected files,
+and writes a size manifest. It fails rather than silently accepting a partial
+download.
+
+Repeated runs are idempotent: a matching manifest skips the 1.3 GB download.
+Use `--force` only when intentionally refreshing the source.
+
+The downloader writes `manifest.json` with the dataset identifier and exact
+file sizes. This protects Airflow retries from needless downloads and catches
+partial extraction before ingestion begins.
+
+## Local Airflow with Docker
+
+```bash
+docker compose -f docker-compose.airflow.yml up
+```
+
+Then open `http://localhost:8080` and run `finpulse_invoice_to_cash`.
+
+Apache Airflow orchestration is defined in
+[`dags/finpulse_pipeline.py`](./dags/finpulse_pipeline.py). Install Airflow
+using the matching constraints file for your Python version, then initialize
+Airflow with `AIRFLOW_HOME` and run the `finpulse_invoice_to_cash` DAG. The
+DAG downloads the full dataset, streams both source files into the warehouse
+database, and builds the marts. In Cloud Composer, replace
+`/opt/airflow/data/finpulse` with a
+GCS-backed staging strategy and move the download task to a secure worker.
+After the quality gate, the DAG runs dbt source freshness and dbt build against
+BigQuery.
+
+For a direct DAG validation:
+
+```bash
+export AIRFLOW_HOME="$PWD/.airflow"
+export PYTHONPATH="$PWD/src:$PWD"
+airflow db migrate
+airflow dags list
+airflow dags test finpulse_invoice_to_cash 2026-01-31
+```
+
+The final dbt task requires a configured `dbt/profiles.yml`, a
+`GCP_PROJECT_ID`, and BigQuery credentials. The local Python/SQLite tasks can
+be tested without those cloud prerequisites.
+
+## Deployment workflow
+
+### Development
+
+1. Create a dedicated GCP project or use a sandbox project.
+2. Create a remote Terraform state bucket.
+3. Set `TF_VAR_project_id` and `TF_VAR_billing_account_id`.
+4. Run `terraform -chdir=terraform/envs/dev init`.
+5. Review `terraform plan`.
+6. Apply only after confirming region, bucket names, IAM, and budget alerts.
+7. Configure Airflow/Composer to use the deployed bucket and service account.
+8. Run dbt freshness and build checks.
+
+### Production
+
+Production uses a separate state prefix, datasets with deletion protection,
+separate Pub/Sub resources, and a protected GitHub environment. Deployment is
+performed through GitHub OIDC and Workload Identity Federation rather than a
+long-lived JSON key.
+
+See [docs/release-checklist.md](./docs/release-checklist.md) before deploying.
+
+## Backlog status
+
+Implemented: professional structure, complete dataset download, streaming
+bulk loader, Airflow DAG, dbt contracts, Terraform development foundation,
+Beam ticket-event contract, and CI quality gates.
+
+Deployment-ready contracts are implemented. Live GCP execution remains
+environment-specific: it requires a project, billing account, remote state,
+WIF configuration, and approved credentials.
+
+See [docs/interview-guide.md](./docs/interview-guide.md) for the demo script
+and design questions this project prepares you to answer.
+
+## Developer commands
+
+```bash
+make test
+make compile
+make demo
+make download
+make airflow-up
+```
+
+Use [`.env.example`](./.env.example) for configuration names and
+[docs/release-checklist.md](./docs/release-checklist.md) before applying any
+GCP environment.
+
+For BigQuery transformations, follow
+[docs/dbt-runbook.md](./docs/dbt-runbook.md). The Airflow load task must
+complete before `dbt source freshness` or `dbt build` runs.
