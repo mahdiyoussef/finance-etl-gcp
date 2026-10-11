@@ -1,0 +1,18 @@
+[project]
+name = "finpulse"
+version = "0.1.0"
+description = "Local invoice-to-cash and support cost intelligence MVP"
+requires-python = ">=3.10"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[project.scripts]
+finpulse = "finpulse.cli:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

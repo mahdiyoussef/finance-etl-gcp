@@ -1,0 +1,5 @@
+# Install with the matching Apache Airflow constraints file.
+apache-airflow==2.10.5
+kaggle>=1.6.17
+apache-beam[gcp]>=2.60.0
+dbt-bigquery>=1.8,<2.0
