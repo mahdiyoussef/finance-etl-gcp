@@ -1,6 +1,6 @@
-# FinPulse: Invoice-to-Cash & Support Cost Intelligence
+# Finance ETL: Invoice-to-Cash & Support Cost Intelligence
 
-FinPulse is an end-to-end data engineering portfolio project for a fictional
+Finance ETL is an end-to-end data engineering project for a fictional
 B2B SaaS company. It unifies invoice, payment, customer, vendor, and support
 event data so finance and support leaders can answer:
 
@@ -21,36 +21,28 @@ generator -> landing CSV -> batch loader -> SQLite raw/core -> marts
                                       \-> ticket events -> deduplicated facts
 ```
 
-## Architecture diagrams
+## Architecture
 
-### GCP architecture
-
-![FinPulse GCP architecture](./diagrams/gcp-architecture.svg)
+![Finance ETL GCP Architecture](./GCP%20Finance%20ETL.jpg)
 
 The architecture uses Google Cloud service nodes for Cloud Storage, Cloud
 Composer/Airflow, Pub/Sub, Dataflow, BigQuery, dbt, Looker Studio, and the
-cross-cutting Terraform/IAM/Monitoring controls.
-
-### ETL pipeline
-
-![FinPulse ETL pipeline](./diagrams/etl-pipeline.svg)
-
-The ETL diagram separates the idempotent batch path from the event-time
-streaming path and shows where validation, quarantine, dbt transformations,
-and serving occur.
+cross-cutting Terraform/IAM/Monitoring controls. It separates the idempotent
+batch path from the event-time streaming path and shows where validation,
+quarantine, dbt transformations, and serving occur.
 
 ## Quick start: local MVP
 
 ```bash
-PYTHONPATH=src python -m finpulse run --output data/demo --customers 25 --invoices 100
-python -m unittest discover -s tests -v
+PYTHONPATH=. python -m pipeline run --output data/demo --customers 25 --invoices 100
+python -m pytest tests/ -v
 ```
 
 The run produces:
 
 - `data/demo/landing/invoices_YYYY-MM-DD.csv`
 - `data/demo/landing/ticket_events_YYYY-MM-DD.jsonl`
-- `data/demo/finpulse.db`
+- `data/demo/finance.db`
 - `data/demo/marts/ar_aging.csv`
 - `data/demo/marts/dso.csv`
 - `data/demo/marts/invoice_risk.csv`
@@ -59,7 +51,7 @@ The run produces:
 The report date is explicit so backfills and tests are reproducible:
 
 ```bash
-python -m finpulse run --output data/demo --report-date 2026-01-31
+python -m pipeline run --output data/demo --report-date 2026-01-31
 ```
 
 The CLI prints a quality report containing accepted row counts, quarantine
@@ -72,6 +64,35 @@ Ticket events are retained as an append-only fact and materialized into
 The generator deliberately emits duplicates, invalid rows, and late ticket
 events. The loader quarantines invalid records and uses business keys to make
 re-runs idempotent.
+
+## Project Structure
+
+```text
+pipeline/               Python application package (extract / load / stream / utils)
+  extract/              Synthetic data generator and external CSV loader
+  load/                 Batch warehouse loader and mart materialisation
+  stream/               Pub/Sub ticket event processor (Beam contract)
+  utils/                Shared data quality helpers
+config/                 Centralised environment configuration
+dags/                   Apache Airflow DAGs / Cloud Composer entrypoints
+scripts/                Operational CLIs, dataset download, env validation
+tests/
+  unit/                 Unit tests for each pipeline layer
+  integration/          Integration tests for project structure and artifacts
+dbt/
+  models/staging/       Type normalisation models
+  models/intermediate/  Customer enrichment layer
+  models/marts/         Aggregated analytical surfaces
+  snapshots/            SCD Type 2 status history
+  macros/               Reusable dbt macros
+infra/terraform/        GCP infrastructure (dev and prod environments)
+  modules/              Reusable Terraform modules
+  envs/dev/             Development environment
+  envs/prod/            Production environment
+docs/                   Architecture overview, data dictionary, runbook
+warehouse/ddl/          BigQuery dataset and table DDL
+data/                   Ignored local data and generated artifacts
+```
 
 ## Business grain and metrics
 
@@ -135,7 +156,7 @@ message. It is an operational investigation surface, not a silent discard.
 | Landing directory | GCS |
 | SQLite raw/core tables | BigQuery datasets |
 | `BatchLoader` | Composer task / Cloud Run Job |
-| `TicketEventProcessor` | Beam Dataflow pipeline |
+| `ticket_event_processor` | Beam Dataflow pipeline |
 | CSV marts | dbt BigQuery marts |
 
 The local implementation is the executable contract for those later adapters.
@@ -144,35 +165,18 @@ the pipeline never creates a second 1.3 GB combined staging file.
 Source amounts are retained as `amount_local`; `amount_usd` is derived with the
 configured FX snapshot and unsupported currencies are quarantined.
 
-## Repository layout
+## Infrastructure
 
-```text
-src/finpulse/       application and ingestion package
-dags/               Apache Airflow DAGs / Cloud Composer entrypoints
-scripts/            operational CLIs, including full dataset download
-tests/              unit and integration tests
-terraform/          environment and GCP infrastructure modules
-data/               ignored local data and generated artifacts
-```
-
-Additional deployment and analytics contracts are in:
-
-```text
-warehouse/ddl/      BigQuery dataset and table DDL
-ml/                 BigQuery ML model SQL
-dashboards/         Dashboard metric and page contract
-airflow/            Local Airflow instructions and constraints reference
-```
-
+Terraform configurations are in [`infra/terraform/`](./infra/terraform).
 The first infrastructure environment is in
-[`terraform/envs/dev`](./terraform/envs/dev). It provisions labeled GCS,
+[`infra/terraform/envs/dev`](./infra/terraform/envs/dev). It provisions labeled GCS,
 BigQuery raw/core datasets, and Pub/Sub event/DLQ topics. It intentionally
 requires an explicit project ID and a pre-created remote-state bucket before
 apply.
 
 The dbt contract is in [`dbt/`](./dbt), and the optional Beam contract is in
-[`streaming.py`](./src/finpulse/streaming.py). These are validated in CI
-without requiring cloud credentials.
+[`pipeline/stream/ticket_event_processor.py`](./pipeline/stream/ticket_event_processor.py).
+These are validated in CI without requiring cloud credentials.
 
 ## Full B2B dataset download
 
@@ -203,15 +207,15 @@ partial extraction before ingestion begins.
 docker compose -f docker-compose.airflow.yml up
 ```
 
-Then open `http://localhost:8080` and run `finpulse_invoice_to_cash`.
+Then open `http://localhost:8080` and run `finance_invoice_to_cash`.
 
 Apache Airflow orchestration is defined in
-[`dags/finpulse_pipeline.py`](./dags/finpulse_pipeline.py). Install Airflow
+[`dags/finance_pipeline.py`](./dags/finance_pipeline.py). Install Airflow
 using the matching constraints file for your Python version, then initialize
-Airflow with `AIRFLOW_HOME` and run the `finpulse_invoice_to_cash` DAG. The
+Airflow with `AIRFLOW_HOME` and run the `finance_invoice_to_cash` DAG. The
 DAG downloads the full dataset, streams both source files into the warehouse
 database, and builds the marts. In Cloud Composer, replace
-`/opt/airflow/data/finpulse` with a
+`/opt/airflow/data/finance` with a
 GCS-backed staging strategy and move the download task to a secure worker.
 After the quality gate, the DAG runs dbt source freshness and dbt build against
 BigQuery.
@@ -220,10 +224,10 @@ For a direct DAG validation:
 
 ```bash
 export AIRFLOW_HOME="$PWD/.airflow"
-export PYTHONPATH="$PWD/src:$PWD"
+export PYTHONPATH="$PWD"
 airflow db migrate
 airflow dags list
-airflow dags test finpulse_invoice_to_cash 2026-01-31
+airflow dags test finance_invoice_to_cash 2026-01-31
 ```
 
 The final dbt task requires a configured `dbt/profiles.yml`, a
@@ -237,7 +241,7 @@ be tested without those cloud prerequisites.
 1. Create a dedicated GCP project or use a sandbox project.
 2. Create a remote Terraform state bucket.
 3. Set `TF_VAR_project_id` and `TF_VAR_billing_account_id`.
-4. Run `terraform -chdir=terraform/envs/dev init`.
+4. Run `terraform -chdir=infra/terraform/envs/dev init`.
 5. Review `terraform plan`.
 6. Apply only after confirming region, bucket names, IAM, and budget alerts.
 7. Configure Airflow/Composer to use the deployed bucket and service account.
@@ -259,10 +263,13 @@ workflow contain the operating instructions.
 
 ```bash
 make test
+make unit-test
+make integration-test
 make compile
 make demo
 make download
 make airflow-up
+make validate-env
 ```
 
 Use [`.env.example`](./.env.example) for configuration names and

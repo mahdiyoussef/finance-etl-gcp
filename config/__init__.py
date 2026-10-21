@@ -1,0 +1,2 @@
+"""Initialises the config package."""
+

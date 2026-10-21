@@ -1,9 +1,9 @@
--- FinPulse BigQuery raw-layer table and dataset contract.
-create schema if not exists `${PROJECT_ID}.finpulse_raw`;
-create schema if not exists `${PROJECT_ID}.finpulse_core`;
-create schema if not exists `${PROJECT_ID}.finpulse_marts`;
+-- Finance ETL BigQuery raw-layer table and dataset contract.
+create schema if not exists `${PROJECT_ID}.finance_raw`;
+create schema if not exists `${PROJECT_ID}.finance_core`;
+create schema if not exists `${PROJECT_ID}.finance_marts`;
 
-create table if not exists `${PROJECT_ID}.finpulse_raw.invoices` (
+create table if not exists `${PROJECT_ID}.finance_raw.invoices` (
   invoice_id string not null,
   customer_id string,
   invoice_date date not null,
@@ -21,7 +21,7 @@ partition by invoice_date
 cluster by customer_id, status
 options (require_partition_filter = true);
 
-create table if not exists `${PROJECT_ID}.finpulse_raw.ticket_events` (
+create table if not exists `${PROJECT_ID}.finance_raw.ticket_events` (
   event_id string not null,
   ticket_id string not null,
   customer_id string not null,

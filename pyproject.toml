@@ -1,18 +1,22 @@
 [project]
-name = "finpulse"
+name = "finance-etl"
 version = "0.1.0"
-description = "Local invoice-to-cash and support cost intelligence MVP"
+description = "GCP Finance ETL: Invoice-to-Cash & Support Cost Intelligence"
 requires-python = ">=3.10"
 
 [tool.setuptools]
-package-dir = {"" = "src"}
+package-dir = {"" = "."}
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["."]
+include = ["pipeline*", "config*"]
 
 [project.scripts]
-finpulse = "finpulse.cli:main"
+finance-etl = "pipeline.cli:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["src"]
+pythonpath = ["."]
+
+[project.optional-dependencies]
+dev = ["pytest"]

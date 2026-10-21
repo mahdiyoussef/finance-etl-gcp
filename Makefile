@@ -1,22 +1,35 @@
-.PHONY: test compile demo download airflow-up terraform-fmt
+.PHONY: test unit-test integration-test compile demo download airflow-up terraform-fmt lint validate-env
 
 PYTHON ?= python3
 
+# Developer shortcut: python -m pytest tests/ -v
 test:
-	PYTHONPATH=src $(PYTHON) -m unittest discover -s tests -v
+	PYTHONPATH=. $(PYTHON) -m pytest tests/ -v
+
+unit-test:
+	PYTHONPATH=. $(PYTHON) -m pytest tests/unit/ -v
+
+integration-test:
+	PYTHONPATH=. $(PYTHON) -m pytest tests/integration/ -v
 
 compile:
-	PYTHONPATH=src $(PYTHON) -m compileall -q src dags scripts tests
+	PYTHONPATH=. $(PYTHON) -m compileall -q pipeline dags scripts
 
 demo:
-	PYTHONPATH=src $(PYTHON) -m finpulse run --output data/demo
+	PYTHONPATH=. $(PYTHON) -m pipeline run --output data/demo
 
 download:
-	PYTHONPATH=src $(PYTHON) scripts/download_b2b_dataset.py
+	PYTHONPATH=. $(PYTHON) scripts/download_b2b_dataset.py
 
 airflow-up:
 	docker compose -f docker-compose.airflow.yml up
 
 terraform-fmt:
-	terraform -chdir=terraform/envs/dev fmt -recursive
-	terraform -chdir=terraform/envs/prod fmt -recursive
+	terraform -chdir=infra/terraform/envs/dev fmt -recursive
+	terraform -chdir=infra/terraform/envs/prod fmt -recursive
+
+validate-env:
+	bash scripts/validate_env.sh
+
+lint:
+	$(PYTHON) -m compileall -q pipeline dags scripts tests

@@ -9,7 +9,7 @@ export AIRFLOW_HOME="$PWD/.airflow"
 export PYTHONPATH="$PWD/src:$PWD"
 airflow db migrate
 airflow dags list
-airflow dags test finpulse_invoice_to_cash 2026-01-31
+airflow dags test finance_invoice_to_cash 2026-01-31
 ```
 
 Set the DAG's `ROOT` to a writable path containing the Kaggle credentials and

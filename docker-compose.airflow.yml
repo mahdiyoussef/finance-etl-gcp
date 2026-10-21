@@ -6,11 +6,12 @@ services:
       - "8080:8080"
     environment:
       AIRFLOW__CORE__LOAD_EXAMPLES: "false"
-      FINPULSE_ROOT: /opt/airflow/data/finpulse
-      PYTHONPATH: /opt/airflow/project/src:/opt/airflow/project
+      FINANCE_ROOT: /opt/airflow/data/finance
+      PYTHONPATH: /opt/airflow/project:/opt/airflow/project/pipeline
     volumes:
       - ./dags:/opt/airflow/dags
-      - ./src:/opt/airflow/project/src
+      - ./pipeline:/opt/airflow/project/pipeline
+      - ./config:/opt/airflow/project/config
       - ./scripts:/opt/airflow/project/scripts
       - ./dbt:/opt/airflow/project/dbt
       - ./data:/opt/airflow/data

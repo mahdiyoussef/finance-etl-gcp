@@ -4,8 +4,8 @@ on:
   push:
     branches: [main]
     paths:
-      - "terraform/**"
-      - "src/**"
+      - "infra/**"
+      - "pipeline/**"
       - "dags/**"
       - "dbt/**"
       - ".github/workflows/deploy.yml"
@@ -26,11 +26,11 @@ jobs:
           workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
           service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
       - uses: hashicorp/setup-terraform@v3
-      - run: terraform -chdir=terraform/envs/dev init
-      - run: terraform -chdir=terraform/envs/dev plan -out=tfplan
+      - run: terraform -chdir=infra/terraform/envs/dev init
+      - run: terraform -chdir=infra/terraform/envs/dev plan -out=tfplan
         env:
           TF_VAR_project_id: ${{ vars.GCP_PROJECT_ID }}
       - if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-        run: terraform -chdir=terraform/envs/dev apply -auto-approve tfplan
+        run: terraform -chdir=infra/terraform/envs/dev apply -auto-approve tfplan
         env:
           TF_VAR_project_id: ${{ vars.GCP_PROJECT_ID }}

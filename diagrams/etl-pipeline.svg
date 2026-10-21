@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1400" height="600" viewBox="0 0 1400 600" role="img" aria-labelledby="title desc">
-  <title id="title">FinPulse ETL pipeline</title>
+  <title id="title">Finance ETL pipeline</title>
   <desc id="desc">Batch and streaming ETL flow from source data to governed analytical marts.</desc>
   <defs>
     <linearGradient id="bg" x1="0" x2="1"><stop stop-color="#fff"/><stop offset="1" stop-color="#f4f8ff"/></linearGradient>
@@ -7,7 +7,7 @@
     <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L10,3 L0,6 Z" fill="#5f6368"/></marker>
   </defs>
   <rect width="1400" height="600" fill="url(#bg)"/>
-  <text x="50" y="55" font-family="Arial,sans-serif" font-size="30" font-weight="700" fill="#202124">FinPulse ETL and ELT flow</text>
+  <text x="50" y="55" font-family="Arial,sans-serif" font-size="30" font-weight="700" fill="#202124">Finance ETL and ELT flow</text>
   <text x="50" y="83" font-family="Arial,sans-serif" font-size="16" fill="#5f6368">Idempotent batch ingestion plus event-time support streaming</text>
   <g font-family="Arial,sans-serif" font-size="16" text-anchor="middle" filter="url(#shadow)">
     <g><rect x="40" y="150" width="170" height="90" rx="12" fill="#fff" stroke="#4285f4" stroke-width="2"/><circle cx="125" cy="180" r="20" fill="#4285f4"/><text x="125" y="187" fill="#fff" font-weight="700">SRC</text><text x="125" y="220" fill="#202124" font-weight="700">ERP / Kaggle</text></g>

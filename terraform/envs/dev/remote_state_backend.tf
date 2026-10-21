@@ -1,6 +1,0 @@
-terraform {
-  backend "gcs" {
-    bucket = "REPLACE_WITH_BOOTSTRAP_STATE_BUCKET"
-    prefix = "finpulse/dev"
-  }
-}
