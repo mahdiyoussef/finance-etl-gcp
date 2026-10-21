@@ -22,6 +22,7 @@ from scripts.download_b2b_dataset import download
 ROOT = Path(os.environ.get("FINANCE_ROOT", "/opt/airflow/data/finance"))
 SOURCE = ROOT / "external" / "b2b_invoices"
 REPORT_DATE = os.environ.get("FINANCE_REPORT_DATE", "2026-01-31")
+SQL_SERVER_ENDPOINT = os.environ.get("SQL_SERVER_ENDPOINT", "localhost:1433")
 DEFAULT_ARGS = {
     "owner": "finance",
     "depends_on_past": False,
@@ -41,7 +42,7 @@ def load_dataset() -> None:
     missing = [source for source in sources if not source.is_file()]
     if missing:
         raise FileNotFoundError(f"Complete dataset is required; missing {missing}")
-    loader = BatchLoader(ROOT / "finance.db")
+    loader = BatchLoader(ROOT / "finance.db", endpoint=SQL_SERVER_ENDPOINT)
     try:
         loaded = load_external_dataset(loader, sources)
         if loaded == 0:
@@ -52,7 +53,7 @@ def load_dataset() -> None:
 
 def build_marts() -> None:
     """Materialize local marts after external invoice ingestion."""
-    loader = BatchLoader(ROOT / "finance.db")
+    loader = BatchLoader(ROOT / "finance.db", endpoint=SQL_SERVER_ENDPOINT)
     try:
         from datetime import date
         loader.build_marts(ROOT / "marts", date.fromisoformat(REPORT_DATE))
@@ -65,7 +66,7 @@ def build_marts() -> None:
 
 def validate_quality() -> None:
     """Fail the Airflow run when critical warehouse quality checks fail."""
-    loader = BatchLoader(ROOT / "finance.db")
+    loader = BatchLoader(ROOT / "finance.db", endpoint=SQL_SERVER_ENDPOINT)
     try:
         report = loader.quality_report()
         if report["invoice_count"] == 0:

@@ -1,12 +1,30 @@
 services:
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: finance_sqlserver
+    ports:
+      - "1433:1433"
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "YourStrong@Password123"
+      MSSQL_PID: "Developer"
+
   airflow:
     image: apache/airflow:2.10.5-python3.12
     command: standalone
     ports:
       - "8080:8080"
+    depends_on:
+      - mssql
     environment:
       AIRFLOW__CORE__LOAD_EXAMPLES: "false"
       FINANCE_ROOT: /opt/airflow/data/finance
+      SQL_SERVER_ENDPOINT: mssql:1433
+      SQL_SERVER_HOST: mssql
+      SQL_SERVER_PORT: 1433
+      SQL_SERVER_DATABASE: finance_db
+      SQL_SERVER_USER: sa
+      SQL_SERVER_PASSWORD: "YourStrong@Password123"
       PYTHONPATH: /opt/airflow/project:/opt/airflow/project/pipeline
     volumes:
       - ./dags:/opt/airflow/dags

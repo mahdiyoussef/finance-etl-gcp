@@ -18,8 +18,54 @@ DBT_DIR: Path = Path(
     os.environ.get("FINANCE_DBT_DIR", "/opt/airflow/project/dbt")
 )
 
-# ── Database ──────────────────────────────────────────────────────────────────
-DATABASE_NAME: str = os.environ.get("FINANCE_DB_NAME", "finance.db")
+# ── SQL Server / Database Configuration ──────────────────────────────────────
+SQL_SERVER_ENDPOINT: str = os.environ.get(
+    "SQL_SERVER_ENDPOINT", os.environ.get("SQL_SERVER_HOST", "localhost:1433")
+)
+if ":" in SQL_SERVER_ENDPOINT:
+    SQL_SERVER_HOST: str = SQL_SERVER_ENDPOINT.split(":")[0]
+    SQL_SERVER_PORT: int = int(SQL_SERVER_ENDPOINT.split(":")[1])
+else:
+    SQL_SERVER_HOST: str = SQL_SERVER_ENDPOINT
+    SQL_SERVER_PORT: int = int(os.environ.get("SQL_SERVER_PORT", "1433"))
+
+SQL_SERVER_DATABASE: str = os.environ.get(
+    "SQL_SERVER_DATABASE", os.environ.get("SQL_SERVER_DB", "finance_db")
+)
+SQL_SERVER_USER: str = os.environ.get("SQL_SERVER_USER", "sa")
+SQL_SERVER_PASSWORD: str = os.environ.get("SQL_SERVER_PASSWORD", "")
+SQL_SERVER_DRIVER: str = os.environ.get(
+    "SQL_SERVER_DRIVER", "ODBC Driver 18 for SQL Server"
+)
+SQL_SERVER_TRUST_CERTIFICATE: str = os.environ.get(
+    "SQL_SERVER_TRUST_CERTIFICATE", "yes"
+)
+DATABASE_URL: str = os.environ.get("DATABASE_URL", "")
+DATABASE_NAME: str = os.environ.get("FINANCE_DB_NAME", "finance_db")
+
+
+def get_sql_server_connection_string() -> str:
+    """Build ODBC connection string for SQL Server."""
+    return (
+        f"DRIVER={{{SQL_SERVER_DRIVER}}};"
+        f"SERVER={SQL_SERVER_HOST},{SQL_SERVER_PORT};"
+        f"DATABASE={SQL_SERVER_DATABASE};"
+        f"UID={SQL_SERVER_USER};"
+        f"PWD={SQL_SERVER_PASSWORD};"
+        f"TrustServerCertificate={SQL_SERVER_TRUST_CERTIFICATE};"
+    )
+
+
+def get_database_url() -> str:
+    """Return SQLAlchemy connection URI for the configured SQL Server."""
+    if DATABASE_URL:
+        return DATABASE_URL
+    user_pass = f"{SQL_SERVER_USER}:{SQL_SERVER_PASSWORD}@" if SQL_SERVER_USER else ""
+    driver_param = SQL_SERVER_DRIVER.replace(" ", "+")
+    return (
+        f"mssql+pyodbc://{user_pass}{SQL_SERVER_HOST}:{SQL_SERVER_PORT}/{SQL_SERVER_DATABASE}"
+        f"?driver={driver_param}&TrustServerCertificate={SQL_SERVER_TRUST_CERTIFICATE}"
+    )
 
 # ── Reporting ─────────────────────────────────────────────────────────────────
 REPORT_DATE: str = os.environ.get("FINANCE_REPORT_DATE", "2026-01-31")

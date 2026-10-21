@@ -1,6 +1,6 @@
 # dbt layer
 
-The local SQLite marts are the executable baseline. The next GCP adapter should
+The operational SQL Server marts are the executable baseline. The next GCP adapter should
 mirror them with BigQuery dbt models:
 
 ```text

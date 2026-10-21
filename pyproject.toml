@@ -3,6 +3,9 @@ name = "finance-etl"
 version = "0.1.0"
 description = "GCP Finance ETL: Invoice-to-Cash & Support Cost Intelligence"
 requires-python = ">=3.10"
+dependencies = [
+    "sqlalchemy>=1.4.0",
+]
 
 [tool.setuptools]
 package-dir = {"" = "."}
@@ -19,4 +22,8 @@ testpaths = ["tests"]
 pythonpath = ["."]
 
 [project.optional-dependencies]
+sqlserver = [
+    "pyodbc>=4.0.30",
+    "pymssql>=2.2.0",
+]
 dev = ["pytest"]

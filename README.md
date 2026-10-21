@@ -17,7 +17,7 @@ Terraform, dbt, BigQuery ML, and Looker Studio. The local path is deliberately
 complete so it can be tested without cloud credentials:
 
 ```text
-generator -> landing CSV -> batch loader -> SQLite raw/core -> marts
+generator -> landing CSV -> batch loader -> SQL Server raw/core -> marts
                                       \-> ticket events -> deduplicated facts
 ```
 
@@ -154,7 +154,7 @@ message. It is an operational investigation surface, not a silent discard.
 | Local component | GCP implementation |
 |---|---|
 | Landing directory | GCS |
-| SQLite raw/core tables | BigQuery datasets |
+| SQL Server raw/core tables | BigQuery datasets |
 | `BatchLoader` | Composer task / Cloud Run Job |
 | `ticket_event_processor` | Beam Dataflow pipeline |
 | CSV marts | dbt BigQuery marts |
@@ -231,7 +231,7 @@ airflow dags test finance_invoice_to_cash 2026-01-31
 ```
 
 The final dbt task requires a configured `dbt/profiles.yml`, a
-`GCP_PROJECT_ID`, and BigQuery credentials. The local Python/SQLite tasks can
+`GCP_PROJECT_ID`, and BigQuery credentials. The local Python / SQL Server tasks can
 be tested without those cloud prerequisites.
 
 ## Deployment workflow
@@ -259,6 +259,36 @@ remote-state bucket, WIF configuration, and production deletion protection.
 The repository's README, Airflow guide, dbt guide, Terraform files, and CI
 workflow contain the operating instructions.
 
+## SQL Server Configuration
+
+The operational warehouse layer uses Microsoft SQL Server (MSSQL). Its connection endpoint is fully configurable through environment variables:
+
+| Variable | Default | Description |
+|---|---|---|
+| `SQL_SERVER_ENDPOINT` | `localhost:1433` | SQL Server host and port endpoint (`host:port`) |
+| `SQL_SERVER_HOST` | `localhost` | SQL Server hostname or IP address |
+| `SQL_SERVER_PORT` | `1433` | Port for TDS traffic |
+| `SQL_SERVER_DATABASE` | `finance_db` | Target database catalog |
+| `SQL_SERVER_USER` | `sa` | SQL Server authentication username |
+| `SQL_SERVER_PASSWORD` | `YourStrong@Password123` | Password for SQL Server authentication |
+| `SQL_SERVER_DRIVER` | `ODBC Driver 18 for SQL Server` | ODBC driver name |
+| `SQL_SERVER_TRUST_CERTIFICATE` | `yes` | Trust server TLS/SSL certificate |
+| `DATABASE_URL` | *(optional)* | Full SQLAlchemy connection URI override |
+
+### Starting SQL Server Locally with Docker
+
+A pre-configured SQL Server 2022 Developer container is included in `docker-compose.airflow.yml`:
+
+```bash
+# Start SQL Server standalone:
+make sqlserver-up
+
+# Or start SQL Server together with Airflow:
+make airflow-up
+```
+
+The pipeline automatically reads `SQL_SERVER_ENDPOINT` and connects to the active instance. For offline test environments where no SQL Server daemon is running, the engine automatically falls back to local storage so CI and unit tests run seamlessly without external dependencies.
+
 ## Developer commands
 
 ```bash
@@ -269,6 +299,7 @@ make compile
 make demo
 make download
 make airflow-up
+make sqlserver-up
 make validate-env
 ```
 

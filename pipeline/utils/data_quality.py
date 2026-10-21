@@ -12,7 +12,7 @@ def build_quality_report(connection: object) -> dict[str, int | float]:
     """Return measurable data-quality checks for CI and operational logs.
 
     Args:
-        connection: An open SQLite (or BigQuery) connection exposing
+        connection: An open SQL Server (or BigQuery) connection exposing
             ``execute`` and ``fetchone``.
 
     Returns:

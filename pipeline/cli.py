@@ -18,10 +18,11 @@ def main() -> None:
     run.add_argument("--customers", type=int, default=25)
     run.add_argument("--invoices", type=int, default=100)
     run.add_argument("--report-date", default="2026-01-31")
+    run.add_argument("--endpoint", default=None, help="SQL Server endpoint (e.g. localhost:1433)")
     args = parser.parse_args()
     if args.command == "run":
         root = generate_landing(args.output, args.customers, args.invoices)
-        loader = BatchLoader(root / "finance.db")
+        loader = BatchLoader(root / "finance.db", endpoint=args.endpoint)
         try:
             loader.load(root / "landing")
             from datetime import date

@@ -44,7 +44,7 @@ Cloud Composer (Airflow) — Orchestration & scheduling
 | Layer | Location | Purpose |
 |---|---|---|
 | Extract | `pipeline/extract/` | Generate synthetic data; load external CSVs |
-| Load | `pipeline/load/` | Batch warehouse loading; mart materialisation |
+| Load (SQL Server) | `pipeline/load/` | SQL Server batch loading (configurable endpoint); mart materialisation |
 | Stream | `pipeline/stream/` | Pub/Sub event parsing; Beam pipeline contract |
 | Staging | `dbt/models/staging/` | Type normalisation; no business logic |
 | Intermediate | `dbt/models/intermediate/` | Customer enrichment; derived columns |

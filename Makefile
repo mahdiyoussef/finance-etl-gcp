@@ -1,4 +1,4 @@
-.PHONY: test unit-test integration-test compile demo download airflow-up terraform-fmt lint validate-env
+.PHONY: test unit-test integration-test compile demo download airflow-up sqlserver-up terraform-fmt lint validate-env
 
 PYTHON ?= python3
 
@@ -23,6 +23,9 @@ download:
 
 airflow-up:
 	docker compose -f docker-compose.airflow.yml up
+
+sqlserver-up:
+	docker compose -f docker-compose.airflow.yml up mssql -d
 
 terraform-fmt:
 	terraform -chdir=infra/terraform/envs/dev fmt -recursive

@@ -38,7 +38,7 @@ def load_external_dataset(
     """Stream source CSVs into the warehouse without creating a combined file.
 
     Args:
-        loader: Batch loader exposing a SQLite connection and quarantine method.
+        loader: Batch loader exposing a SQL Server warehouse connection and quarantine method.
         files: Complete source CSV paths, normally train and test splits.
         batch_size: Number of invoices/customers flushed per database batch.
 
@@ -113,19 +113,46 @@ def load_external_dataset(
 def _flush(connection: object, rows: list[tuple[object, ...]]) -> tuple[int, int]:
     """Insert a bounded invoice batch and return inserted and duplicate counts."""
     before = connection.total_changes
-    connection.executemany(
-        """insert or ignore into invoices
-        (invoice_id, customer_id, invoice_date, due_date, amount_local,
-         currency, fx_rate, amount_usd, status, paid_date)
-        values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""", rows
-    )
-    inserted = connection.total_changes - before
-    return inserted, len(rows) - inserted
+    is_sqlserver = getattr(connection, "dialect", "sqlite") == "sqlserver"
+    if is_sqlserver:
+        inserted = 0
+        for r in rows:
+            cursor = connection.execute(
+                """if not exists (select 1 from invoices where invoice_id = ?)
+                insert into invoices
+                (invoice_id, customer_id, invoice_date, due_date, amount_local,
+                 currency, fx_rate, amount_usd, status, paid_date)
+                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (r[0], *r),
+            )
+            if getattr(cursor, "rowcount", 0) > 0:
+                inserted += 1
+        return inserted, len(rows) - inserted
+    else:
+        connection.executemany(
+            """insert or ignore into invoices
+            (invoice_id, customer_id, invoice_date, due_date, amount_local,
+             currency, fx_rate, amount_usd, status, paid_date)
+            values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""", rows
+        )
+        inserted = connection.total_changes - before
+        return inserted, len(rows) - inserted
 
 
 def _flush_customers(connection: object, customers: dict[str, tuple[str, str]]) -> None:
     """Insert a bounded customer batch with source-derived region values."""
-    connection.executemany(
-        "insert or replace into customers values (?, ?, ?, ?)",
-        [(key, name, "Unknown", region) for key, (name, region) in customers.items()],
-    )
+    is_sqlserver = getattr(connection, "dialect", "sqlite") == "sqlserver"
+    if is_sqlserver:
+        for key, (name, region) in customers.items():
+            connection.execute(
+                """if not exists (select 1 from customers where customer_id = ?)
+                insert into customers (customer_id, customer_name, segment, region) values (?, ?, ?, ?)
+                else
+                update customers set customer_name = ?, region = ? where customer_id = ?""",
+                (key, key, name, "Unknown", region, name, region, key),
+            )
+    else:
+        connection.executemany(
+            "insert or replace into customers values (?, ?, ?, ?)",
+            [(key, name, "Unknown", region) for key, (name, region) in customers.items()],
+        )

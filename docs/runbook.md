@@ -32,7 +32,13 @@ Copy `.env.example` to `.env` and fill in the values:
 | `GCP_PROJECT_ID` | — | GCP project to deploy to |
 | `FINANCE_ROOT` | `/opt/airflow/data/finance` | Pipeline working directory |
 | `FINANCE_REPORT_DATE` | `2026-01-31` | Analytical report date |
-| `FINANCE_DB_NAME` | `finance.db` | SQLite database filename (local only) |
+| `SQL_SERVER_ENDPOINT` | `localhost:1433` | SQL Server host:port endpoint |
+| `SQL_SERVER_HOST` | `localhost` | SQL Server host or IP |
+| `SQL_SERVER_PORT` | `1433` | SQL Server port |
+| `SQL_SERVER_DATABASE` | `finance_db` | SQL Server database name |
+| `SQL_SERVER_USER` | `sa` | SQL Server username |
+| `SQL_SERVER_PASSWORD` | `YourStrong@Password123` | SQL Server password |
+| `SQL_SERVER_DRIVER` | `ODBC Driver 18 for SQL Server` | ODBC Driver name |
 | `FINANCE_DBT_DIR` | `/opt/airflow/project/dbt` | Path to dbt project |
 | `BQ_RAW_DATASET` | `finance_raw` | BigQuery raw dataset name |
 | `BQ_CORE_DATASET` | `finance_core` | BigQuery core dataset name |
