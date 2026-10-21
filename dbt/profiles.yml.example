@@ -1,11 +1,11 @@
-finpulse:
+finance_etl:
   target: dev
   outputs:
     dev:
       type: bigquery
       method: oauth
       project: "{{ env_var('GCP_PROJECT_ID') }}"
-      dataset: finpulse_core
+      dataset: finance_core
       location: US
       threads: 4
       timeout_seconds: 300

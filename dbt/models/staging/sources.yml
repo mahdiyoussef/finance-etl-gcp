@@ -2,7 +2,7 @@ version: 2
 
 sources:
   - name: raw
-    schema: finpulse_raw
+    schema: finance_raw
     tables:
       - name: invoices
         loaded_at_field: _ingested_at

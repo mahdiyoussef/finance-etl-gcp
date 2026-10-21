@@ -1,12 +1,12 @@
-name: finpulse
+name: finance_etl
 version: "1.0.0"
 config-version: 2
-profile: finpulse
+profile: finance_etl
 model-paths: ["models"]
 test-paths: ["tests"]
 snapshot-paths: ["snapshots"]
 models:
-  finpulse:
+  finance_etl:
     staging:
       +materialized: view
     core:
